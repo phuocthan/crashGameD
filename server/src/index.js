@@ -12,7 +12,12 @@ import { createApi } from './api.js';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const PORT = Number(process.env.PORT || 3001);
 const DB_FILE = process.env.DB_FILE || join(root, 'data', 'nova-rush.db');
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const IS_PROD = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (IS_PROD ? '' : 'admin123');
+if (!ADMIN_PASSWORD || (IS_PROD && ADMIN_PASSWORD.length < 8)) {
+  console.error('ADMIN_PASSWORD must be set (at least 8 characters) in production.');
+  process.exit(1);
+}
 
 const db = openDb(DB_FILE);
 const settings = new Settings(db);
@@ -20,6 +25,8 @@ const fair = new FairChain(db);
 const engine = new GameEngine({ db, settings, fair });
 
 const app = express();
+app.set('trust proxy', 1); // behind Railway's proxy: real client IPs in audit log
+app.get('/healthz', (_req, res) => res.json({ ok: true, phase: engine.phase }));
 const server = createServer(app);
 const hub = new Hub({ server, db, engine, settings });
 
@@ -33,7 +40,7 @@ if (existsSync(clientDist)) app.use(express.static(clientDist));
 engine.start();
 server.listen(PORT, () => {
   console.log(`Nova Rush server on http://localhost:${PORT}`);
-  console.log(`  admin:  http://localhost:${PORT}/admin   (password from ADMIN_PASSWORD, default "admin123")`);
+  console.log(`  admin:  http://localhost:${PORT}/admin   (password from ADMIN_PASSWORD${IS_PROD ? "" : ', default "admin123"'})`);
   if (existsSync(clientDist)) console.log(`  game:   http://localhost:${PORT}/`);
 });
 
