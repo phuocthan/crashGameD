@@ -1,0 +1,15 @@
+{
+  "name": "nova-rush",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Nova Rush - an original crash game (PixiJS client, Node server, admin tool)",
+  "workspaces": ["server", "client"],
+  "scripts": {
+    "dev": "concurrently -n server,client -c cyan,magenta \"npm:dev -w server\" \"npm:dev -w client\"",
+    "build": "npm run build -w client",
+    "start": "npm run start -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7"
+  }
+}

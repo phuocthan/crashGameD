@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nova Rush Admin</title>
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <section id="login" class="login-screen" hidden>
+    <form class="login-card">
+      <div class="brand">NOVA<b>RUSH</b> <span>admin</span></div>
+      <input type="password" name="password" placeholder="Admin password" autocomplete="current-password" required />
+      <button class="btn primary">Sign in</button>
+      <p class="err"></p>
+    </form>
+  </section>
+
+  <div id="shell" hidden>
+    <nav class="nav">
+      <div class="brand">NOVA<b>RUSH</b> <span>admin</span></div>
+      <a href="#dashboard" data-view="dashboard">Dashboard</a>
+      <a href="#users" data-view="users">Users</a>
+      <a href="#rounds" data-view="rounds">Rounds</a>
+      <a href="#settings" data-view="settings">Game settings</a>
+      <a href="#fairness" data-view="fairness">Seed chain</a>
+      <a href="#audit" data-view="audit">Audit log</a>
+      <div class="nav-foot">
+        <a href="/" target="_blank" rel="noopener">Open game ↗</a>
+        <button class="link" id="logout">Sign out</button>
+      </div>
+    </nav>
+
+    <main>
+      <!-- Dashboard -->
+      <section class="view" data-view="dashboard">
+        <header class="view-head"><h1>Dashboard</h1><button class="btn" id="pause-btn">Pause game</button></header>
+        <div class="live card">
+          <div><span class="lbl">Phase</span><b id="live-phase">–</b></div>
+          <div><span class="lbl">Round</span><b id="live-round">–</b></div>
+          <div><span class="lbl">Multiplier</span><b id="live-mult">–</b></div>
+          <div><span class="lbl">Crash point <small>(secret)</small></span><b id="live-crash" class="secret" title="Hover to reveal">••••</b></div>
+          <div><span class="lbl">Real bets</span><b id="live-bets">–</b></div>
+          <div><span class="lbl">Wagered / paid</span><b id="live-money">–</b></div>
+        </div>
+        <div class="kpis" id="kpis"></div>
+        <div class="grid2">
+          <div class="card">
+            <h3>House profit per round <small class="muted">last 120, real players only</small></h3>
+            <svg id="chart-profit" class="chart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="card">
+            <h3>Crash points <small class="muted">log scale</small></h3>
+            <svg id="chart-crash" class="chart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- Users -->
+      <section class="view" data-view="users" hidden>
+        <header class="view-head"><h1>Users</h1><input id="user-q" placeholder="Search username…" /></header>
+        <div class="card table-wrap"><table>
+          <thead><tr><th>ID</th><th>User</th><th class="r">Balance</th><th class="r">Bets</th><th class="r">Wagered</th><th class="r">Player P/L</th><th>Status</th><th></th></tr></thead>
+          <tbody id="users-body"></tbody>
+        </table></div>
+      </section>
+
+      <!-- Rounds -->
+      <section class="view" data-view="rounds" hidden>
+        <header class="view-head"><h1>Rounds</h1>
+          <div class="pager"><button class="btn" data-page="-1">← Newer</button><span id="rounds-page">1</span><button class="btn" data-page="1">Older →</button></div>
+        </header>
+        <div class="card table-wrap"><table>
+          <thead><tr><th>#</th><th>Crash</th><th>Edge</th><th class="r">Bets</th><th class="r">Wagered</th><th class="r">Paid</th><th class="r">House P/L</th><th>Ended</th><th>Hash</th></tr></thead>
+          <tbody id="rounds-body"></tbody>
+        </table></div>
+      </section>
+
+      <!-- Settings -->
+      <section class="view" data-view="settings" hidden>
+        <header class="view-head"><h1>Game settings</h1></header>
+        <form id="settings-form" class="card settings">
+          <label>House edge <span class="unit">%</span><input name="houseEdge" type="number" step="0.1" min="0" max="50" /><small>Theoretical RTP = 100% − edge. Applies from the next round.</small></label>
+          <label>Min bet <span class="unit">credits</span><input name="minBet" type="number" step="0.01" min="0.01" /></label>
+          <label>Max bet <span class="unit">credits</span><input name="maxBet" type="number" step="0.01" min="0.01" /></label>
+          <label>Max auto cash-out <span class="unit">x</span><input name="maxAutoCashout" type="number" step="0.01" min="1.01" /></label>
+          <label>Betting window <span class="unit">seconds</span><input name="bettingMs" type="number" step="0.5" min="2" /></label>
+          <label>Pause after crash <span class="unit">seconds</span><input name="crashedMs" type="number" step="0.5" min="0.5" /></label>
+          <label>Starting balance <span class="unit">credits</span><input name="startBalance" type="number" step="1" min="0" /><small>For newly registered players.</small></label>
+          <label>Lobby bots <span class="unit">count</span><input name="bots" type="number" step="1" min="0" max="100" /><small>Display-only; never touch balances or stats.</small></label>
+          <label class="check"><input name="paused" type="checkbox" /> Game paused <small>Stops after the current round finishes.</small></label>
+          <div class="actions"><button class="btn primary">Save settings</button></div>
+        </form>
+      </section>
+
+      <!-- Fairness -->
+      <section class="view" data-view="fairness" hidden>
+        <header class="view-head"><h1>Seed chain</h1><button class="btn danger" id="rotate-btn">Rotate chain</button></header>
+        <div class="card">
+          <dl class="kv" id="chain-info"></dl>
+          <p class="muted">Rotating creates a new secret seed and publishes a new terminal hash. Rounds already played stay verifiable against their old chain.</p>
+        </div>
+      </section>
+
+      <!-- Audit -->
+      <section class="view" data-view="audit" hidden>
+        <header class="view-head"><h1>Audit log</h1></header>
+        <div class="card table-wrap"><table>
+          <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Detail</th></tr></thead>
+          <tbody id="audit-body"></tbody>
+        </table></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="dlg"><form method="dialog" class="dlg">
+    <header><h3 id="dlg-title"></h3><button class="link" value="cancel" aria-label="Close">✕</button></header>
+    <div id="dlg-body"></div>
+  </form></dialog>
+  <div id="toast" class="toast" hidden></div>
+  <script src="admin.js"></script>
+</body>
+</html>
